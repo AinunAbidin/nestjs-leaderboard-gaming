@@ -1,38 +1,42 @@
+version: '3.7'
+
 services:
-  db:
+  postgres_db:
     image: postgres:15
-    restart: unless-stopped
-    ports:
-      - "5425:5432"
+    hostname: postgres_db
+    container_name: postgres_db
+    restart: always
     environment:
-      POSTGRES_USER: db
-      POSTGRES_PASSWORD: dbtest
-      POSTGRES_DB: nesttest
-    volumes:
-      - db_data:/var/lib/postgresql/data
+      POSTGRES_USER: 'db'     # Akan menjadi 'db'
+      POSTGRES_PASSWORD: 'dbtest'  # Akan menjadi 'dbtest'
+      POSTGRES_DB: 'nesttest'
+    ports:
+      - '5444:5432'
     networks:
-      - app-network
+      - prisma-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U db -d nesttest"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
 
-  api:
-    build:
-      context: .
+  server:
+    build: 
+      context: .  
       dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://db:dbtest@db:5432/nesttest?schema=public
-      PORT: 3000
-    depends_on:
-      - db
     ports:
-      - "3000:3000"
+      - '3000:3000'
+    stdin_open: true
+    tty: true  
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: 'postgresql://db:dbtest@postgres_db:5432/nesttest?schema=public'
     networks:
-      - app-network
-    command: sh -c "npx prisma migrate deploy --schema prisma/schema.prisma && node dist/src/main.js"
-
+      - prisma-network
 networks:
-  app-network:
-
-volumes:
-  db_data:
+  prisma-network:
+    name: prisma-network
