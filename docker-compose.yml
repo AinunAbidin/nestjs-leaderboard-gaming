@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - "5425:5432"
+    environment:
+      POSTGRES_USER: db
+      POSTGRES_PASSWORD: dbtest
+      POSTGRES_DB: nesttest
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://db:dbtest@db:5432/nesttest?schema=public
+      PORT: 3000
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    command: sh -c "npx prisma migrate deploy --schema prisma/schema.prisma && node dist/src/main.js"
+
+networks:
+  app-network:
+
+volumes:
+  db_data:
