@@ -30,10 +30,12 @@ export class ScoreService {
         user: { select: { playerName: true } },
       },
       orderBy: [{ value: 'desc' }, { createdAt: 'asc' }],
+      distinct: ['userId'],
       take: limit,
     });
 
-    return scores.map((score) => ({
+    return scores.map((score, index) => ({
+      ranking: index + 1,
       playerName: score.user.playerName,
       score: score.value,
     }));
